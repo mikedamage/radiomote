@@ -1,0 +1,13 @@
+node_modules
+
+# direnv config files
+.envrc.*.local
+.envrc.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# package manager logs
+npm-debug.log
+.vscode/*

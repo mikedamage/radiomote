@@ -1,0 +1,18 @@
+{
+  "name": "radiomote",
+  "version": "0.1.0",
+  "description": "Remote PTT for ham radio over LAN using WebRTC",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "radio",
+    "raspberrypi",
+    "gpio",
+    "webrtc"
+  ],
+  "author": "Mike Green <mike.is.green@gmail.com>",
+  "license": "MIT"
+}
