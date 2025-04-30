@@ -14,5 +14,9 @@
     "webrtc"
   ],
   "author": "Mike Green <mike.is.green@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@roamhq/wrtc": "^0.8.0",
+    "fluent-ffmpeg": "^2.1.3"
+  }
 }
