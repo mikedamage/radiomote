@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3a3a3a">
+  <title>Radiomote</title>
+  <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+
+  <header>
+    <h1>Radiomote</h1>
+  </header>
+
+  <main>
+    <div class="status">
+      Not connected
+    </div>
+
+    <div class="controls">
+      <div class="volume">
+        <div class="field">
+          <label for="vol-speaker">Speaker Out</label>
+          <input type="range" min="0" max="100" step="1" id="vol-speaker" value="70">
+        </div>
+
+        <div class="field">
+          <label for="vol-mic">Mic In</label>
+          <input type="range" min="0" max="100" step="1" id="vol-mic" value="70">
+        </div>
+      </div>
+
+      <div class="ptt-control">
+        <button id="ptt" type="button">PTT</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="client.mjs" type="module"></script>
+</body>
+
+</html>
