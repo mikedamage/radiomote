@@ -4,8 +4,7 @@
   "description": "Remote audio and PTT control for ham radio over LAN via WebRTC",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "keywords": [
     "radio",
@@ -16,6 +15,7 @@
   "author": "Mike Green <mike.is.green@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@koa/send": "^6.0.0",
     "@roamhq/wrtc": "^0.8.0",
     "fluent-ffmpeg": "^2.1.3",
     "koa": "^3.0.0",
