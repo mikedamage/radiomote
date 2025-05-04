@@ -1,6 +1,7 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import winston from 'winston';
+import { jsonResponse, getConnection, logRequest } from './lib/middleware.js';
 import { send } from '@koa/send';
 import { join as pathJoin } from 'node:path';
 import { WebRtcConnectionManager } from './lib/webrtc-connection-manager.js';
@@ -29,54 +30,29 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-const jsonResponse = async (ctx, next) => {
-  ctx.response.headers['Content-Type'] = 'application/json';
-  next();
-}
-
-const getConnection = async (ctx, next) => {
-  const { id } = ctx.params;
-  ctx.state = ctx.state || {};
-  const connection = connectionManager.getConnection(id);
-
-  if (connection) {
-    ctx.state.connection = connection;
-  } else {
-    ctx.status = 404;
-  }
-
-  next();
-};
-
-const logRequest = async (ctx, next) => {
-  logger.info(`${ctx.status} ${ctx.method} ${ctx.path}`);
-  await next();
-};
-
-router.use(logRequest);
+router.param('id', getConnection(connectionManager));
+router.use(logRequest(logger));
 
 router.get('/', async (ctx) => {
   ctx.status = 200;
   await send(ctx, pathJoin('public', 'index.html'));
 });
 
-router.get('/js/client.js', async (ctx) => {
-  ctx.status = 200;
-  await send(ctx, pathJoin('public', 'js', 'client.js'));
+app.use(async (ctx, next) => {
+  if (/^\/(js|css|images)/.test(ctx.path)) {
+    await send(ctx, ctx.path, { root: pathJoin(import.meta.dirname, 'public') });
+  }
+  await next();
 });
 
-router.get(
-  '/connections',
-  jsonResponse,
-  async (ctx, next) => {
-    ctx.state = ctx.state || {};
-    ctx.state.connections = connectionManager.getConnections();
-    ctx.body = JSON.stringify(ctx.state.connections);
-    next();
-  }
-);
+router.get('/connections', jsonResponse, async (ctx, next) => {
+  ctx.state = ctx.state || {};
+  ctx.state.connections = connectionManager.getConnections();
+  ctx.body = JSON.stringify(ctx.state.connections);
+  next();
+});
 
-router.post('/connections', async (ctx, next) => {
+router.post('/connections', jsonResponse, async (ctx, next) => {
   try {
     const connection = await connectionManager.createConnection({
       beforeOffer: setupIntercom,
@@ -91,7 +67,7 @@ router.post('/connections', async (ctx, next) => {
   }
 });
 
-router.get('/connections/:id', getConnection, async (ctx, next) => {
+router.get('/connections/:id', async (ctx, next) => {
   next();
 
   const { connection } = ctx.state;
@@ -101,7 +77,7 @@ router.get('/connections/:id', getConnection, async (ctx, next) => {
   }
 });
 
-router.delete('/connections/:id', getConnection, async (ctx, next) => {
+router.delete('/connections/:id', jsonResponse, async (ctx, next) => {
   next();
 
   const { connection } = ctx.state;
@@ -113,7 +89,7 @@ router.delete('/connections/:id', getConnection, async (ctx, next) => {
   }
 });
 
-router.get('/connections/:id/local-description', getConnection, async (ctx, next) => {
+router.get('/connections/:id/local-description', jsonResponse, async (ctx, next) => {
   next();
 
   const { connection } = ctx.state;
@@ -123,7 +99,7 @@ router.get('/connections/:id/local-description', getConnection, async (ctx, next
   }
 });
 
-router.get('/connections/:id/remote-description', getConnection, async (ctx, next) => {
+router.get('/connections/:id/remote-description', jsonResponse, async (ctx, next) => {
   next();
 
   const { connection } = ctx.state;
