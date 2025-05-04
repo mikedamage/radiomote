@@ -29,6 +29,11 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
+const jsonResponse = async (ctx, next) => {
+  ctx.response.headers['Content-Type'] = 'application/json';
+  next();
+}
+
 const getConnection = async (ctx, next) => {
   const { id } = ctx.params;
   ctx.state = ctx.state || {};
@@ -55,12 +60,21 @@ router.get('/', async (ctx) => {
   await send(ctx, pathJoin('public', 'index.html'));
 });
 
-router.get('/connections', async (ctx, next) => {
-  ctx.state = ctx.state || {};
-  ctx.state.connections = connectionManager.getConnections();
-  ctx.body = JSON.stringify(ctx.state.connections);
-  next();
+router.get('/js/client.js', async (ctx) => {
+  ctx.status = 200;
+  await send(ctx, pathJoin('public', 'js', 'client.js'));
 });
+
+router.get(
+  '/connections',
+  jsonResponse,
+  async (ctx, next) => {
+    ctx.state = ctx.state || {};
+    ctx.state.connections = connectionManager.getConnections();
+    ctx.body = JSON.stringify(ctx.state.connections);
+    next();
+  }
+);
 
 router.post('/connections', async (ctx, next) => {
   try {
