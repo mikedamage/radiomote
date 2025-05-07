@@ -1,13 +1,11 @@
 import Koa from 'koa';
 import Router from 'koa-router';
-import winston from 'winston';
+import { logger } from './lib/logger.js';
 import { jsonResponse, getConnection, logRequest } from './lib/middleware.js';
 import { send } from '@koa/send';
 import { join as pathJoin } from 'node:path';
 import { WebRtcConnectionManager } from './lib/webrtc-connection-manager.js';
 import { setupIntercom } from './lib/setup-intercom.js';
-
-const NODE_ENV = process.env?.NODE_ENV || 'development';
 
 const connectionManager = new WebRtcConnectionManager();
 
@@ -23,12 +21,6 @@ process.on('SIGTERM', cleanup);
 
 const app = new Koa();
 const router = new Router();
-const { combine, timestamp, cli, json, simple } = winston.format;
-const logger = winston.createLogger({
-  level: process.env?.LOG_LEVEL || 'info',
-  format: NODE_ENV === 'development' ? combine(timestamp(), cli(), simple()) : combine(timestamp(), json()),
-  transports: [new winston.transports.Console()],
-});
 
 router.param('id', getConnection(connectionManager));
 router.use(logRequest(logger));
@@ -36,13 +28,6 @@ router.use(logRequest(logger));
 router.get('/', async (ctx) => {
   ctx.status = 200;
   await send(ctx, pathJoin('public', 'index.html'));
-});
-
-app.use(async (ctx, next) => {
-  if (/^\/(js|css|images)/.test(ctx.path)) {
-    await send(ctx, ctx.path, { root: pathJoin(import.meta.dirname, 'public') });
-  }
-  await next();
 });
 
 router.get('/connections', jsonResponse, async (ctx, next) => {
@@ -58,12 +43,14 @@ router.post('/connections', jsonResponse, async (ctx, next) => {
       beforeOffer: setupIntercom,
     });
     ctx.state.connections = connectionManager.getConnections();
+    ctx.status = 201;
     ctx.body = JSON.stringify(connection.toJSON());
   } catch (error) {
     logger.error(error);
     ctx.status = 500;
+    throw error;
   } finally {
-    next();
+    await next();
   }
 });
 
@@ -90,7 +77,7 @@ router.delete('/connections/:id', jsonResponse, async (ctx, next) => {
 });
 
 router.get('/connections/:id/local-description', jsonResponse, async (ctx, next) => {
-  next();
+  await next();
 
   const { connection } = ctx.state;
 
@@ -100,7 +87,7 @@ router.get('/connections/:id/local-description', jsonResponse, async (ctx, next)
 });
 
 router.get('/connections/:id/remote-description', jsonResponse, async (ctx, next) => {
-  next();
+  await next();
 
   const { connection } = ctx.state;
 
@@ -109,7 +96,31 @@ router.get('/connections/:id/remote-description', jsonResponse, async (ctx, next
   }
 });
 
+router.patch('/connections/:id/remote-description', jsonResponse, async (ctx, next) => {
+  next();
+
+  const { connection } = ctx.state;
+
+  try {
+    await connection.applyAnswer(JSON.parse(ctx.request.body));
+
+    ctx.status = 200;
+    ctx.body = connection.toJSON().remoteDescription;
+  } catch (error) {
+    ctx.status = 400;
+  }
+});
+
 app.use(router.routes()).use(router.allowedMethods());
+
+app.use(async (ctx, next) => {
+  if (/^\/(js|css|images)/.test(ctx.path)) {
+    logger.info(ctx.path);
+    await send(ctx, ctx.path, { root: pathJoin(import.meta.dirname, 'public') });
+    return;
+  }
+  await next();
+});
 
 logger.info(`Listening on localhost:${process.env.PORT}`);
 app.listen(process.env.PORT);

@@ -12,7 +12,7 @@ export class ConnectionClient {
   async createConnection(connectionOptions = {}) {
     connectionOptions = {
       beforeAnswer() {},
-      ...options,
+      ...connectionOptions,
     };
 
     const creationResponse = await fetch(`${this.options.host}/connections`, {
@@ -25,29 +25,25 @@ export class ConnectionClient {
       sdpSemantics: 'unified-plan',
     });
 
-    localPeerConnection.addEventListener(
-      'connectionstatechange',
-      () => {
-        if (localPeerConnection.connectionState !== 'closed') return;
+    localPeerConnection.addEventListener('connectionstatechange', () => {
+      if (localPeerConnection.connectionState !== 'closed') return;
 
-        try {
-          fetch(`${host}/connections/${id}`, { method: 'DELETE' });
-        } catch (err) {
-          console.warn('error deleting closed peer connection: %O', err);
-        }
-      },
-      false,
-    );
+      try {
+        fetch(`/connections/${id}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('error deleting closed peer connection: %O', err);
+      }
+    });
 
     try {
       await localPeerConnection.setRemoteDescription(remotePeerConnection.localDescription);
-      await beforeAnswer(localPeerConnection);
+      await connectionOptions.beforeAnswer(localPeerConnection);
 
       const answer = await localPeerConnection.createAnswer();
       await localPeerConnection.setLocalDescription(answer);
 
-      await fetch(`${host}/connections/${id}/remote-description`, {
-        method: 'POST',
+      await fetch(`/connections/${id}/remote-description`, {
+        method: 'PATCH',
         body: JSON.stringify(localPeerConnection.localDescription),
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +53,7 @@ export class ConnectionClient {
       return localPeerConnection;
     } catch (err) {
       localPeerConnection.close();
-      throw error;
+      throw err;
     }
   }
 }
